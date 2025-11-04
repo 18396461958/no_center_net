@@ -287,7 +287,7 @@ impl ClusterManager {
     }
 
     async fn gossip_loop(&self) {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
         
         while *self.is_running.read().await {
             interval.tick().await;
