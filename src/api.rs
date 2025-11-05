@@ -192,17 +192,18 @@ async fn receive_gossip(
         if let Ok(members_list) = serde_json::from_value::<Vec<crate::types::NodeInfo>>(
             serde_json::Value::Array(members.clone())
         ) {
-            for mut member in members_list {
+            for member in members_list {
                 // 添加判断：跳过发送者自身的成员信息
                 if member.id == sender_id {
-                    // 使用 insert 方法更新 DashMap
-                    if let Some(mut existing_member) = cluster.members.get_mut(&member.id) {
-                        existing_member.last_seen = now;
-                        continue
-                    }else{
-                        member.last_seen = now;
-                        cluster.members.insert(member.id.clone(), member);
-                    }
+                    cluster.members.entry(member.id.clone())
+                    .and_modify(|existing| {
+                        existing.last_seen = now; // 存在则更新 last_seen
+                    })
+                    .or_insert_with(|| {
+                        let mut new_member = member;
+                        new_member.last_seen = now; // 不存在则插入新节点并设置 last_seen
+                        new_member
+                    });
                 }
             }
         }
@@ -210,15 +211,17 @@ async fn receive_gossip(
         if let Ok(services_list) = serde_json::from_value::<Vec<crate::types::ServiceInfo>>(
             serde_json::Value::Array(services.clone())
         ) {
-            for mut service in services_list {
+            for service in services_list {
                 if service.metadata.get("node_id").and_then(|v| Some(v.as_str())) == Some(sender_id) {
-                    if let Some(mut existing_service) = cluster.services.get_mut(&service.service_id) {
+
+                     cluster.services.entry(service.service_id.clone()).and_modify(|existing_service| {
                         existing_service.last_health_check = now;
-                        continue;
-                    }else{
-                        service.last_health_check = now;
-                        cluster.register_service(service);  
-                    }
+                    })
+                    .or_insert_with(|| {
+                        let mut new_service = service;
+                        new_service.last_health_check = now;
+                        new_service
+                    });
                 }
             }
         }

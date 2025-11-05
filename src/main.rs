@@ -4,6 +4,7 @@ mod api;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::{CorsLayer, Any};
 use crate::api::create_api_router;
 use crate::cluster::ClusterManager;
 
@@ -41,7 +42,12 @@ async fn main() -> anyhow::Result<()> {
     cluster_manager.start_gossip().await;
     cluster_manager.start_health_check().await;  // 启动健康检查
 
-    let app = create_api_router(cluster_manager.clone());
+    let app = create_api_router(cluster_manager.clone()).layer( // 添加CORS中间件层
+            CorsLayer::new()
+                .allow_origin(Any)    // 允许所有来源
+                .allow_headers(Any)   // 允许所有头部
+                .allow_methods(Any), // 允许所有方法
+        );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("服务器运行在 {}", addr);
