@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!("Failed to join cluster: {}, starting as standalone", e);
     } else {
         tracing::info!("Successfully joined cluster. Current members: {}", 
-                       cluster_manager.get_all_members().len());
+        cluster_manager.get_all_members().len());
     }
     
     cluster_manager.start_gossip().await;
